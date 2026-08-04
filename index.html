@@ -429,6 +429,7 @@ function viewMenu(){
     <div class="menuitem" id="mChange">${I.key}<span>Master-Passwort ändern</span></div>
     <div class="menuitem" id="mBackup">${I.download}<span>Verschlüsseltes Backup exportieren</span></div>
     <div class="menuitem" id="mRestore">${I.upload}<span>Backup wiederherstellen</span></div>
+    <div class="menuitem" id="mBitwarden">${I.upload}<span>Aus Bitwarden importieren</span></div>
     <div class="menuitem" id="mExportPlain">${I.download}<span>Klartext-Export (CSV)</span></div>
     <div class="menuitem danger" id="mLock2">${I.lock}<span>Jetzt sperren</span></div>
     <p class="note" style="text-align:left">${ENTRIES.length} Einträge · Daten liegen verschlüsselt nur auf diesem Gerät. Kein Cloud-Sync.</p>
@@ -436,6 +437,7 @@ function viewMenu(){
   $("mChange").onclick=viewChangePw;
   $("mBackup").onclick=exportBackup;
   $("mRestore").onclick=restoreBackup;
+  $("mBitwarden").onclick=importBitwarden;
   $("mExportPlain").onclick=exportPlain;
   $("mLock2").onclick=lock;
 }
@@ -482,6 +484,69 @@ function restoreBackup(){
   };
   inp.click();
 }
+/* ---------- Bitwarden-Import (unverschlüsseltes JSON) ---------- */
+function bwFieldsToText(item){
+  // Sammelt Notizen + custom fields + TOTP in einen Notiztext
+  let parts=[];
+  if(item.notes) parts.push(String(item.notes));
+  if(item.login && item.login.totp) parts.push("TOTP-Secret: "+item.login.totp);
+  if(Array.isArray(item.fields)){
+    item.fields.forEach(f=>{ if(f && (f.name||f.value)) parts.push((f.name||"")+": "+(f.value||"")); });
+  }
+  // Karten
+  if(item.card){
+    const c=item.card;
+    const cc=[c.cardholderName&&("Name: "+c.cardholderName), c.number&&("Nummer: "+c.number),
+      (c.expMonth||c.expYear)&&("Gültig: "+(c.expMonth||"")+"/"+(c.expYear||"")), c.code&&("CVV: "+c.code)].filter(Boolean);
+    if(cc.length) parts.push("Karte – "+cc.join(", "));
+  }
+  // Identität
+  if(item.identity){
+    const id=item.identity;
+    const keys=["firstName","lastName","email","phone","address1","city","postalCode","country","company"];
+    const idp=keys.map(k=>id[k]?k+": "+id[k]:null).filter(Boolean);
+    if(idp.length) parts.push("Identität – "+idp.join(", "));
+  }
+  return parts.join("\n");
+}
+function importBitwarden(){
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".json,application/json";
+  inp.onchange=async ()=>{
+    const f=inp.files[0]; if(!f) return;
+    try{
+      const data=JSON.parse(await f.text());
+      if(data.encrypted===true) throw new Error('Der Export ist verschlüsselt. Bitte in Bitwarden als "JSON" (nicht "Encrypted JSON") exportieren.');
+      const items=Array.isArray(data.items)?data.items:null;
+      if(!items) throw new Error("Keine Einträge gefunden – ist das ein Bitwarden-JSON-Export?");
+      let added=0;
+      items.forEach(it=>{
+        const login=it.login||{};
+        let url="";
+        if(Array.isArray(login.uris)&&login.uris.length) url=login.uris[0].uri||"";
+        else if(login.uri) url=login.uri;
+        const entry={
+          id:cryptoId(),
+          title:(it.name||"(ohne Titel)").trim(),
+          user:(login.username||"").trim(),
+          pass:login.password||"",
+          url:(url||"").trim(),
+          notes:bwFieldsToText(it)
+        };
+        // leere Karteileichen überspringen
+        if(!entry.title && !entry.user && !entry.pass && !entry.notes) return;
+        ENTRIES.push(entry); added++;
+      });
+      await persist();
+      closeSheet(); renderList();
+      toast(added+" Einträge importiert");
+    }catch(e){
+      alert("Import fehlgeschlagen: "+e.message);
+    }
+  };
+  inp.click();
+}
+
 function exportPlain(){
   closeSheet();
   openSheet(`
