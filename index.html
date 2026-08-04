@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"/>
+<meta name="theme-color" content="#0f1115"/>
+<meta name="color-scheme" content="dark"/>
+<title>Passwörter</title>
+<link rel="manifest" href="manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Passwörter"/>
+<style>
+  :root{
+    --bg:#0f1115; --card:#1a1d24; --card2:#22262f; --line:#2b303b;
+    --txt:#f2f4f8; --mut:#9aa3b2; --mut2:#6b7280;
+    --accent:#4f7cff; --accent2:#3b63d6;
+    --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+    --radius:20px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overscroll-behavior-y:none;
+  }
+  #app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;}
+  .hidden{display:none !important;}
+
+  /* ---------- Buttons / inputs ---------- */
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--accent);color:#fff;font-weight:700;font-size:15px;
+    padding:14px 18px;border-radius:999px;transition:transform .08s, background .15s;width:100%;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn:disabled{opacity:.5;}
+  .btn.sec{background:var(--card2);color:var(--txt);}
+  .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
+  .btn.small{width:auto;padding:9px 14px;font-size:13px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+  input,textarea{
+    width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+    border-radius:14px;padding:13px 14px;font-size:15px;outline:none;font-family:inherit;
+  }
+  input:focus,textarea:focus{border-color:var(--accent);}
+  textarea{resize:vertical;min-height:70px;}
+  .row{display:flex;gap:8px;align-items:center;}
+  .row > input{flex:1;}
+  .iconbtn{background:var(--card2);border:1px solid var(--line);border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex:none;color:var(--mut);}
+  .iconbtn:active{background:var(--card);}
+  svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* ---------- Lock / setup screen ---------- */
+  .center{flex:1;display:flex;flex-direction:column;justify-content:center;padding:28px 24px;}
+  .logo{width:66px;height:66px;border-radius:20px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 10px 30px rgba(79,124,255,.35);}
+  .logo svg{width:32px;height:32px;stroke:#fff;stroke-width:2.2;}
+  h1{font-size:24px;font-weight:800;text-align:center;margin:0 0 4px;}
+  .sub{text-align:center;color:var(--mut);font-size:14px;margin:0 0 26px;}
+  .authcard{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px;}
+  .err{background:rgba(239,68,68,.12);color:#fca5a5;font-size:13px;font-weight:600;padding:10px 12px;border-radius:12px;margin-top:12px;}
+  .note{font-size:11px;color:var(--mut2);text-align:center;margin-top:18px;line-height:1.5;padding:0 10px;}
+
+  /* ---------- Header ---------- */
+  header{position:sticky;top:0;z-index:20;background:rgba(15,17,21,.85);backdrop-filter:blur(10px);display:flex;align-items:center;gap:6px;padding:14px 16px calc(14px);padding-top:max(14px,env(safe-area-inset-top));}
+  header h2{flex:1;font-size:19px;font-weight:800;margin:0;}
+  .hbtn{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--mut);}
+  .hbtn:active{background:var(--card2);}
+
+  /* ---------- Search ---------- */
+  .searchwrap{padding:4px 16px 8px;}
+  .search{position:relative;}
+  .search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--mut2);width:18px;height:18px;}
+  .search input{padding-left:40px;border-radius:14px;background:var(--card);}
+
+  /* ---------- List ---------- */
+  main{flex:1;padding:0 16px 120px;}
+  .entry{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 14px;margin-bottom:10px;transition:background .1s;}
+  .entry:active{background:var(--card2);}
+  .avatar{width:42px;height:42px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;}
+  .entry .info{flex:1;min-width:0;}
+  .entry .info .t{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .entry .info .u{color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+  .entry .copy{color:var(--mut2);flex:none;}
+  .empty{text-align:center;color:var(--mut2);padding:60px 20px;}
+  .empty .big{font-size:40px;margin-bottom:10px;}
+
+  /* ---------- FAB ---------- */
+  .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom));z-index:30;width:auto;}
+  .fab .btn{box-shadow:0 8px 24px rgba(79,124,255,.4);padding:15px 24px;}
+
+  /* ---------- Sheet / modal ---------- */
+  .overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);display:flex;align-items:flex-end;justify-content:center;}
+  .sheet{background:var(--card);width:100%;max-width:520px;max-height:92vh;overflow-y:auto;border-radius:26px 26px 0 0;border:1px solid var(--line);border-bottom:none;padding:8px 20px calc(24px + env(safe-area-inset-bottom));animation:up .22s ease;}
+  @keyframes up{from{transform:translateY(30px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+  .grabber{width:40px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 14px;}
+  .sheet h3{font-size:18px;font-weight:800;margin:0 0 16px;}
+  .sheet .actions{display:flex;gap:10px;margin-top:8px;}
+  .menuitem{display:flex;align-items:center;gap:14px;padding:15px 6px;font-size:15px;font-weight:600;border-bottom:1px solid var(--line);}
+  .menuitem:last-child{border-bottom:none;}
+  .menuitem svg{color:var(--mut);flex:none;}
+  .menuitem.danger{color:var(--danger);} .menuitem.danger svg{color:var(--danger);}
+
+  /* pw strength / generate */
+  .genrow{display:flex;align-items:center;gap:12px;margin:10px 0 4px;}
+  .genrow input[type=range]{flex:1;accent-color:var(--accent);}
+  .chip{font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--mut);}
+  .chip.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom));background:var(--card2);color:var(--txt);border:1px solid var(--line);padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;}
+  .warnbox{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d;font-size:12px;line-height:1.5;padding:12px;border-radius:12px;margin:10px 0;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Passwort-Manager – lokal & verschlüsselt (Web Crypto, PBKDF2 + AES-GCM)
+   Alle Daten bleiben im Browser dieses Geräts (localStorage), verschlüsselt.
+   ============================================================ */
+
+const LSKEY   = "pm_vault_v1";
+const ITER    = 310000;                 // PBKDF2-Iterationen
+const AUTOLOCK_MS = 3*60*1000;          // Auto-Sperre nach Inaktivität
+const CLIP_CLEAR_MS = 25*1000;          // Zwischenablage nach X ms leeren
+
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+const $ = (id)=>document.getElementById(id);
+
+/* ---------- Base64 Helpers ---------- */
+function b64(bytes){ let s=""; const b=new Uint8Array(bytes); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function ub64(str){ const s=atob(str); const b=new Uint8Array(s.length); for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i); return b; }
+
+/* ---------- Krypto ---------- */
+async function deriveKey(password, salt){
+  const km = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {name:"PBKDF2", salt, iterations:ITER, hash:"SHA-256"},
+    km, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]
+  );
+}
+async function encryptData(key, obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(JSON.stringify(obj)));
+  return {iv:b64(iv), ct:b64(ct)};
+}
+async function decryptData(key, ivB64, ctB64){
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:ub64(ivB64)}, key, ub64(ctB64));
+  return JSON.parse(dec.decode(pt));
+}
+
+/* ---------- Vault-Persistenz ----------
+   Gespeichert wird: { v, salt, iter, iv, ct }  (ct = verschlüsselte Einträge) */
+function loadRaw(){ try{ return JSON.parse(localStorage.getItem(LSKEY)); }catch(e){ return null; } }
+function saveRaw(o){ localStorage.setItem(LSKEY, JSON.stringify(o)); }
+function vaultExists(){ return !!loadRaw(); }
+
+/* ---------- App-State (nur im Speicher) ---------- */
+let KEY = null;         // abgeleiteter Schlüssel, nur im RAM
+let SALT = null;        // Uint8Array
+let ENTRIES = [];       // entschlüsselte Einträge
+let lastActivity = Date.now();
+let autolockTimer = null;
+
+/* ---------- Icons ---------- */
+const I = {
+  lock:'<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  key:'<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 21 2m-4 0 3 3m-6 3 3 3"/></svg>',
+  search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>',
+  plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  copy:'<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+  menu:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  eye:'<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeoff:'<svg viewBox="0 0 24 24"><path d="M9.9 4.2A10.9 10.9 0 0 1 12 4c6.5 0 10 7 10 7a13.4 13.4 0 0 1-2.2 3M6.6 6.6A13.3 13.3 0 0 0 2 11s3.5 7 10 7a10.9 10.9 0 0 0 4.1-.8"/><path d="m3 3 18 18"/><path d="M9.5 9.5a3 3 0 0 0 4.2 4.2"/></svg>',
+  dice:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/></svg>',
+  trash:'<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>',
+  download:'<svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+  upload:'<svg viewBox="0 0 24 24"><path d="M12 21V9m0 0 4 4m-4-4-4 4M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg>',
+  shield:'<svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4 3 7 7 9 4-2 7-5 7-9V6l-7-3Z"/></svg>',
+};
+
+/* ---------- Farb-Avatar aus Name ---------- */
+function colorFor(str){
+  let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))%360;
+  return `hsl(${h} 55% 45%)`;
+}
+function initials(str){
+  const s=(str||"?").trim(); if(!s) return "?";
+  const p=s.split(/\s+/); return (p[0][0]+(p[1]?p[1][0]:"")).toUpperCase();
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(html){ $("app").innerHTML = html; }
+
+/* ---------- Setup (erster Start) ---------- */
+function viewSetup(){
+  render(`
+    <div class="center">
+      <div class="logo">${I.shield}</div>
+      <h1>Willkommen</h1>
+      <p class="sub">Lege ein Master-Passwort fest</p>
+      <div class="authcard">
+        <div class="field"><label>Master-Passwort</label>
+          <input id="p1" type="password" placeholder="mindestens 8 Zeichen" autocomplete="new-password"/></div>
+        <div class="field"><label>Wiederholen</label>
+          <input id="p2" type="password" placeholder="Master-Passwort bestätigen" autocomplete="new-password"/></div>
+        <div id="err" class="err hidden"></div>
+        <button class="btn" id="go" style="margin-top:6px">Tresor erstellen</button>
+      </div>
+      <p class="note">⚠️ Es gibt keine „Passwort vergessen"-Funktion. Ohne dein Master-Passwort sind die Daten unwiederbringlich verschlüsselt. Merk es dir gut.</p>
+    </div>`);
+  $("go").onclick = async ()=>{
+    const p1=$("p1").value, p2=$("p2").value;
+    if(p1.length<8) return showErr("Das Master-Passwort muss mindestens 8 Zeichen haben.");
+    if(p1!==p2)     return showErr("Die Passwörter stimmen nicht überein.");
+    SALT = crypto.getRandomValues(new Uint8Array(16));
+    KEY  = await deriveKey(p1, SALT);
+    ENTRIES = [];
+    await persist();
+    startSession();
+  };
+  const onEnter=(e)=>{ if(e.key==="Enter") $("go").click(); };
+  $("p1").addEventListener("keydown",onEnter); $("p2").addEventListener("keydown",onEnter);
+}
+
+/* ---------- Unlock ---------- */
+function viewLock(){
+  render(`
+    <div class="center">
+      <div class="logo">${I.lock}</div>
+      <h1>Passwörter</h1>
+      <p class="sub">Tresor entsperren</p>
+      <div class="authcard">
+        <div class="field"><label>Master-Passwort</label>
+          <input id="pw" type="password" placeholder="Master-Passwort" autocomplete="current-password" autofocus/></div>
+        <div id="err" class="err hidden"></div>
+        <button class="btn" id="go" style="margin-top:6px">Entsperren</button>
+      </div>
+      <p class="note">Deine Daten liegen verschlüsselt nur auf diesem Gerät.</p>
+    </div>`);
+  const go = async ()=>{
+    const pw=$("pw").value; if(!pw) return;
+    $("go").disabled=true; $("go").textContent="Entsperre…";
+    const raw=loadRaw();
+    try{
+      SALT = ub64(raw.salt);
+      KEY  = await deriveKey(pw, SALT);
+      ENTRIES = await decryptData(KEY, raw.iv, raw.ct);
+      startSession();
+    }catch(e){
+      KEY=null; ENTRIES=[];
+      $("go").disabled=false; $("go").textContent="Entsperren";
+      showErr("Falsches Master-Passwort.");
+    }
+  };
+  $("go").onclick=go;
+  $("pw").addEventListener("keydown",(e)=>{ if(e.key==="Enter") go(); });
+  setTimeout(()=>$("pw").focus(),50);
+}
+function showErr(msg){ const e=$("err"); if(e){ e.textContent=msg; e.classList.remove("hidden"); } }
+
+/* ---------- Hauptansicht (Liste) ---------- */
+let searchTerm="";
+function viewMain(){
+  render(`
+    <header>
+      <h2>Passwörter</h2>
+      <button class="hbtn" id="mLock" title="Sperren">${I.lock}</button>
+      <button class="hbtn" id="mMenu" title="Menü">${I.menu}</button>
+    </header>
+    <div class="searchwrap">
+      <div class="search">${I.search}
+        <input id="q" type="text" placeholder="Suchen…" value="${escapeHtml(searchTerm)}" autocomplete="off"/>
+      </div>
+    </div>
+    <main id="list"></main>
+    <div class="fab"><button class="btn" id="add">${I.plus} Neu</button></div>
+  `);
+  $("mLock").onclick=lock;
+  $("mMenu").onclick=viewMenu;
+  $("add").onclick=()=>viewEntry(null);
+  $("q").addEventListener("input",(e)=>{ searchTerm=e.target.value; renderList(); });
+  renderList();
+  bump();
+}
+function renderList(){
+  const q=searchTerm.trim().toLowerCase();
+  let list=ENTRIES.slice();
+  if(q) list=list.filter(e=>
+    (e.title||"").toLowerCase().includes(q) ||
+    (e.user||"").toLowerCase().includes(q) ||
+    (e.url||"").toLowerCase().includes(q));
+  list.sort((a,b)=>(a.title||"").localeCompare(b.title||"",'de',{sensitivity:'base'}));
+  const el=$("list"); if(!el) return;
+  if(!ENTRIES.length){
+    el.innerHTML=`<div class="empty"><div class="big">🔐</div><p>Noch keine Einträge.<br>Tippe auf „Neu", um zu starten.</p></div>`; return;
+  }
+  if(!list.length){ el.innerHTML=`<div class="empty"><div class="big">🔍</div><p>Nichts gefunden.</p></div>`; return; }
+  el.innerHTML=list.map(e=>`
+    <div class="entry" data-id="${e.id}">
+      <div class="avatar" style="background:${colorFor(e.title||e.user||'?')}">${escapeHtml(initials(e.title||e.user))}</div>
+      <div class="info">
+        <div class="t">${escapeHtml(e.title||"(ohne Titel)")}</div>
+        <div class="u">${escapeHtml(e.user||e.url||"")}</div>
+      </div>
+      <button class="hbtn copy" data-copy="${e.id}" title="Passwort kopieren">${I.copy}</button>
+    </div>`).join("");
+  el.querySelectorAll(".entry").forEach(row=>{
+    row.addEventListener("click",(ev)=>{
+      if(ev.target.closest("[data-copy]")) return;
+      viewEntry(row.getAttribute("data-id"));
+    });
+  });
+  el.querySelectorAll("[data-copy]").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const e=ENTRIES.find(x=>x.id===b.getAttribute("data-copy"));
+      if(e) copyPw(e.pass);
+    });
+  });
+}
+
+/* ---------- Eintrag anlegen/bearbeiten ---------- */
+function viewEntry(id){
+  const e = id ? ENTRIES.find(x=>x.id===id) : {id:null,title:"",user:"",pass:"",url:"",notes:""};
+  const isNew = !id;
+  let shown=false;
+  openSheet(`
+    <h3>${isNew?"Neuer Eintrag":"Eintrag bearbeiten"}</h3>
+    <div class="field"><label>Titel</label><input id="f_title" value="${escapeHtml(e.title)}" placeholder="z.B. GitHub"/></div>
+    <div class="field"><label>Benutzername / E-Mail</label><input id="f_user" value="${escapeHtml(e.user)}" placeholder="name@example.com" autocapitalize="none"/></div>
+    <div class="field"><label>Passwort</label>
+      <div class="row">
+        <input id="f_pass" type="password" value="${escapeHtml(e.pass)}" placeholder="Passwort" autocapitalize="none"/>
+        <button class="iconbtn" id="f_eye">${I.eye}</button>
+        <button class="iconbtn" id="f_gen" title="Generieren">${I.dice}</button>
+      </div>
+    </div>
+    <div class="field"><label>URL</label><input id="f_url" value="${escapeHtml(e.url)}" placeholder="https://…" autocapitalize="none"/></div>
+    <div class="field"><label>Notizen</label><textarea id="f_notes" placeholder="optional">${escapeHtml(e.notes)}</textarea></div>
+    <div class="actions">
+      ${isNew?"":`<button class="btn danger small" id="f_del">${I.trash}</button>`}
+      <button class="btn" id="f_save">Speichern</button>
+    </div>
+  `);
+  $("f_eye").onclick=()=>{ shown=!shown; $("f_pass").type=shown?"text":"password"; $("f_eye").innerHTML=shown?I.eyeoff:I.eye; };
+  $("f_gen").onclick=()=>viewGenerate((pw)=>{ $("f_pass").value=pw; if(!shown){shown=true;$("f_pass").type="text";$("f_eye").innerHTML=I.eyeoff;} });
+  $("f_save").onclick=async ()=>{
+    const obj={
+      id: e.id || cryptoId(),
+      title:$("f_title").value.trim(),
+      user:$("f_user").value.trim(),
+      pass:$("f_pass").value,
+      url:$("f_url").value.trim(),
+      notes:$("f_notes").value
+    };
+    if(!obj.title && !obj.user && !obj.pass){ closeSheet(); return; }
+    if(isNew) ENTRIES.push(obj);
+    else{ const i=ENTRIES.findIndex(x=>x.id===e.id); ENTRIES[i]=obj; }
+    await persist(); closeSheet(); renderList(); toast("Gespeichert");
+  };
+  if(!isNew) $("f_del").onclick=async ()=>{
+    if(!confirm("Diesen Eintrag wirklich löschen?")) return;
+    ENTRIES=ENTRIES.filter(x=>x.id!==e.id);
+    await persist(); closeSheet(); renderList(); toast("Gelöscht");
+  };
+}
+
+/* ---------- Passwort-Generator ---------- */
+let genOpts={len:20, upper:true, lower:true, num:true, sym:true};
+function genPassword(){
+  let set="";
+  if(genOpts.lower) set+="abcdefghijkmnopqrstuvwxyz";
+  if(genOpts.upper) set+="ABCDEFGHJKLMNPQRSTUVWXYZ";
+  if(genOpts.num)   set+="23456789";
+  if(genOpts.sym)   set+="!@#$%^&*()-_=+[]{};:,.?";
+  if(!set) set="abcdefghijkmnopqrstuvwxyz";
+  const out=new Array(genOpts.len);
+  const rnd=crypto.getRandomValues(new Uint32Array(genOpts.len));
+  for(let i=0;i<genOpts.len;i++) out[i]=set[rnd[i]%set.length];
+  return out.join("");
+}
+function viewGenerate(onUse){
+  let current=genPassword();
+  const chips=[["upper","A-Z"],["lower","a-z"],["num","0-9"],["sym","!@#"]];
+  openSheet(`
+    <h3>Passwort generieren</h3>
+    <div class="field">
+      <div class="row">
+        <input id="g_out" class="mono" readonly value="${escapeHtml(current)}"/>
+        <button class="iconbtn" id="g_reroll">${I.dice}</button>
+      </div>
+    </div>
+    <div class="genrow">
+      <span style="font-size:13px;color:var(--mut);min-width:64px">Länge <b id="g_len">${genOpts.len}</b></span>
+      <input id="g_range" type="range" min="8" max="40" value="${genOpts.len}"/>
+    </div>
+    <div class="row" style="flex-wrap:wrap;gap:8px;margin:6px 0 4px">
+      ${chips.map(([k,l])=>`<button class="chip ${genOpts[k]?'on':''}" data-k="${k}">${l}</button>`).join("")}
+    </div>
+    <div class="actions" style="margin-top:16px">
+      <button class="btn sec small" id="g_copy" style="flex:1">Kopieren</button>
+      <button class="btn" id="g_use" style="flex:1">Übernehmen</button>
+    </div>
+  `);
+  const refresh=()=>{ current=genPassword(); $("g_out").value=current; };
+  $("g_reroll").onclick=refresh;
+  $("g_range").addEventListener("input",(e)=>{ genOpts.len=+e.target.value; $("g_len").textContent=genOpts.len; refresh(); });
+  document.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{
+    const k=b.getAttribute("data-k"); genOpts[k]=!genOpts[k];
+    b.classList.toggle("on",genOpts[k]); refresh();
+  });
+  $("g_copy").onclick=()=>copyPw(current);
+  $("g_use").onclick=()=>{ closeSheet(); if(onUse) onUse(current); };
+}
+
+/* ---------- Menü ---------- */
+function viewMenu(){
+  openSheet(`
+    <h3>Menü</h3>
+    <div class="menuitem" id="mChange">${I.key}<span>Master-Passwort ändern</span></div>
+    <div class="menuitem" id="mBackup">${I.download}<span>Verschlüsseltes Backup exportieren</span></div>
+    <div class="menuitem" id="mRestore">${I.upload}<span>Backup wiederherstellen</span></div>
+    <div class="menuitem" id="mExportPlain">${I.download}<span>Klartext-Export (CSV)</span></div>
+    <div class="menuitem danger" id="mLock2">${I.lock}<span>Jetzt sperren</span></div>
+    <p class="note" style="text-align:left">${ENTRIES.length} Einträge · Daten liegen verschlüsselt nur auf diesem Gerät. Kein Cloud-Sync.</p>
+  `);
+  $("mChange").onclick=viewChangePw;
+  $("mBackup").onclick=exportBackup;
+  $("mRestore").onclick=restoreBackup;
+  $("mExportPlain").onclick=exportPlain;
+  $("mLock2").onclick=lock;
+}
+
+/* ---------- Master-Passwort ändern ---------- */
+function viewChangePw(){
+  openSheet(`
+    <h3>Master-Passwort ändern</h3>
+    <div class="field"><label>Neues Master-Passwort</label><input id="c1" type="password" placeholder="mindestens 8 Zeichen"/></div>
+    <div class="field"><label>Wiederholen</label><input id="c2" type="password" placeholder="bestätigen"/></div>
+    <div id="cerr" class="err hidden"></div>
+    <button class="btn" id="cgo" style="margin-top:6px">Ändern</button>
+  `);
+  $("cgo").onclick=async ()=>{
+    const p1=$("c1").value,p2=$("c2").value;
+    if(p1.length<8){ $("cerr").textContent="Mindestens 8 Zeichen."; $("cerr").classList.remove("hidden"); return; }
+    if(p1!==p2){ $("cerr").textContent="Passwörter stimmen nicht überein."; $("cerr").classList.remove("hidden"); return; }
+    SALT=crypto.getRandomValues(new Uint8Array(16));
+    KEY=await deriveKey(p1,SALT);
+    await persist(); closeSheet(); toast("Master-Passwort geändert");
+  };
+}
+
+/* ---------- Backup / Restore (verschlüsselt) ---------- */
+function exportBackup(){
+  const raw=loadRaw();
+  const blob=new Blob([JSON.stringify(raw,null,2)],{type:"application/json"});
+  downloadBlob(blob, `passwoerter-backup-${dateStr()}.json`);
+  closeSheet();
+  toast("Verschlüsseltes Backup gespeichert");
+}
+function restoreBackup(){
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept=".json,application/json";
+  inp.onchange=async ()=>{
+    const f=inp.files[0]; if(!f) return;
+    try{
+      const txt=await f.text(); const obj=JSON.parse(txt);
+      if(!obj.salt||!obj.iv||!obj.ct) throw new Error("Kein gültiges Backup.");
+      if(!confirm("Backup wiederherstellen? Die aktuellen Daten auf diesem Gerät werden ersetzt.")) return;
+      saveRaw(obj); closeSheet(); lock();
+      toast("Backup geladen – bitte mit dessen Master-Passwort entsperren");
+    }catch(e){ alert("Konnte Backup nicht lesen: "+e.message); }
+  };
+  inp.click();
+}
+function exportPlain(){
+  closeSheet();
+  openSheet(`
+    <h3>Klartext-Export</h3>
+    <div class="warnbox">⚠️ Diese Datei enthält <b>alle Passwörter im Klartext</b>. Nur zum Umzug in einen anderen Manager. Danach sofort sicher löschen. Niemals in eine Cloud oder per E-Mail verschicken.</div>
+    <button class="btn danger" id="pgo">Trotzdem als CSV exportieren</button>
+  `);
+  $("pgo").onclick=()=>{
+    const head="title,username,password,url,notes\n";
+    const esc=(s)=>'"'+String(s||"").replace(/"/g,'""')+'"';
+    const rows=ENTRIES.map(e=>[e.title,e.user,e.pass,e.url,(e.notes||"").replace(/\n/g," ")].map(esc).join(",")).join("\n");
+    downloadBlob(new Blob([head+rows],{type:"text/csv"}), `passwoerter-KLARTEXT-${dateStr()}.csv`);
+    closeSheet(); toast("CSV exportiert – Datei sicher löschen!");
+  };
+}
+
+/* ============================================================
+   Sheet-Helfer, Toast, Clipboard, Persist, Session
+   ============================================================ */
+function openSheet(inner){
+  closeSheet();
+  const ov=document.createElement("div"); ov.className="overlay"; ov.id="overlay";
+  ov.innerHTML=`<div class="sheet"><div class="grabber"></div>${inner}</div>`;
+  ov.addEventListener("click",(e)=>{ if(e.target===ov) closeSheet(); });
+  document.body.appendChild(ov); bump();
+}
+function closeSheet(){ const o=$("overlay"); if(o) o.remove(); }
+
+let toastTimer=null;
+function toast(msg){
+  const old=$("toast"); if(old) old.remove();
+  const t=document.createElement("div"); t.className="toast"; t.id="toast"; t.textContent=msg;
+  document.body.appendChild(t);
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.remove(),1800);
+}
+
+async function copyPw(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    toast("Passwort kopiert – wird in "+(CLIP_CLEAR_MS/1000)+"s geleert");
+    setTimeout(async ()=>{ try{
+      const cur=await navigator.clipboard.readText().catch(()=>null);
+      if(cur===text) await navigator.clipboard.writeText("");
+    }catch(e){} }, CLIP_CLEAR_MS);
+  }catch(e){ toast("Kopieren nicht möglich"); }
+}
+
+async function persist(){
+  const {iv,ct}=await encryptData(KEY, ENTRIES);
+  saveRaw({v:1, salt:b64(SALT), iter:ITER, iv, ct});
+}
+
+function cryptoId(){ return b64(crypto.getRandomValues(new Uint8Array(9))).replace(/[^a-zA-Z0-9]/g,"").slice(0,12); }
+function dateStr(){ const d=new Date(); const p=(n)=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function downloadBlob(blob,name){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- Session / Auto-Lock ---------- */
+function startSession(){ viewMain(); armAutolock(); }
+function lock(){
+  KEY=null; ENTRIES=[]; SALT=null; searchTerm="";
+  closeSheet(); const t=$("toast"); if(t) t.remove();
+  clearTimeout(autolockTimer);
+  viewLock();
+}
+function bump(){ lastActivity=Date.now(); }
+function armAutolock(){
+  clearTimeout(autolockTimer);
+  const tick=()=>{
+    if(!KEY) return;
+    if(Date.now()-lastActivity >= AUTOLOCK_MS){ lock(); return; }
+    autolockTimer=setTimeout(tick, 15000);
+  };
+  autolockTimer=setTimeout(tick,15000);
+}
+["click","keydown","touchstart","input"].forEach(ev=>document.addEventListener(ev,bump,{passive:true}));
+document.addEventListener("visibilitychange",()=>{ if(document.hidden && KEY){ /* Sperre bei App-Wechsel nach Timeout via lastActivity */ lastActivity=Math.min(lastActivity, Date.now()-AUTOLOCK_MS+30000); } });
+
+/* ---------- Boot ---------- */
+function boot(){
+  if(!("crypto" in window) || !crypto.subtle){
+    render(`<div class="center"><div class="authcard"><h1>Nicht unterstützt</h1><p class="sub">Dein Browser unterstützt keine sichere Verschlüsselung (Web Crypto). Bitte über HTTPS und in einem modernen Browser öffnen.</p></div></div>`);
+    return;
+  }
+  if(vaultExists()) viewLock(); else viewSetup();
+}
+boot();
+
+/* ---------- Service Worker (offline / installierbar) ---------- */
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
