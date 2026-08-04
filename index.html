@@ -702,9 +702,31 @@ function boot(){
 }
 boot();
 
-/* ---------- Service Worker (offline / installierbar) ---------- */
+/* ---------- Service Worker (offline / installierbar, mit Auto-Update) ---------- */
 if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js").then(reg=>{
+      // Auf neue Version prüfen
+      reg.addEventListener("updatefound",()=>{
+        const nw=reg.installing;
+        if(!nw) return;
+        nw.addEventListener("statechange",()=>{
+          if(nw.state==="installed" && navigator.serviceWorker.controller){
+            // Neue Version wartet -> sofort aktivieren
+            nw.postMessage && nw.postMessage("skipWaiting");
+            if(reg.waiting) reg.waiting.postMessage("skipWaiting");
+          }
+        });
+      });
+      // regelmäßig nach Updates schauen
+      setInterval(()=>reg.update().catch(()=>{}), 60*60*1000);
+    }).catch(()=>{});
+    // Wenn der aktive SW wechselt: Seite einmal neu laden (holt neue App)
+    let reloaded=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(reloaded) return; reloaded=true; window.location.reload();
+    });
+  });
 }
 </script>
 </body>
