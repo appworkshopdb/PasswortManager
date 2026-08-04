@@ -1,0 +1,20 @@
+# Vault-Datenbank - enthält deine verschlüsselten Passwörter, NIEMALS committen
+vault.db
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Bitwarden-Export-Dateien - enthalten Klartext-Passwörter, NIEMALS committen
+bitwarden_export*.json
+*_export*.json
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
